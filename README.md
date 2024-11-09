@@ -1,0 +1,2 @@
+# mdsr
+MDSR - Supabase -Nextjs
