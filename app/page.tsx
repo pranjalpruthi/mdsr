@@ -14,6 +14,8 @@ import { motion } from "framer-motion";
 import ModeToggle from "@/components/mode-toggle";
 import Image from "next/image";
 import { ChantingVideos } from "@/components/sadhana/chanting-videos";
+import { Leaderboard } from "@/components/sadhana/leaderboard";
+import { DailyStats } from "@/components/sadhana/daily-stats";
 
 export default function Home() {
   // Animation variants
@@ -116,7 +118,7 @@ export default function Home() {
             variants={itemVariants}
           >
             <Badge variant="secondary" className="text-xs md:text-sm">
-              v0.0.5 - 🦚 Yamuna Devi Stage 🦚 [mataji-edition]
+              v0.0.6 - 🌺 Madhumangala Stage 🌺 [mataji-edition]
             </Badge>
             
             {/* Operational Status Badge */}
@@ -164,10 +166,19 @@ export default function Home() {
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="flex justify-center">
-              <TabsList className="grid w-full grid-cols-4 max-w-[600px] bg-white/10 dark:bg-black/10 backdrop-blur-md">
+              <TabsList className="grid w-full grid-cols-5 max-w-[600px] bg-white/10 dark:bg-black/10 backdrop-blur-md">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="records">Records</TabsTrigger>
+                <TabsTrigger value="leaderboard" className="relative">
+                  Leaderboard
+                  <span className="absolute -top-2 -right-2 flex h-5 w-5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-pink-500 items-center justify-center text-[10px] text-white font-medium">
+                      New
+                    </span>
+                  </span>
+                </TabsTrigger>
                 <TabsTrigger value="manage">Manage</TabsTrigger>
               </TabsList>
             </div>
@@ -212,19 +223,14 @@ export default function Home() {
             {/* Statistics Tab */}
             <TabsContent value="stats">
               <div className="space-y-6">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <Suspense 
-                    fallback={
-                      <Card className="h-[400px] animate-pulse" />
-                    }
-                  >
+                <div className="grid grid-cols-1 gap-6">
+                  <Suspense fallback={<Card className="h-[400px] animate-pulse" />}>
+                    <DailyStats />
+                  </Suspense>
+                  <Suspense fallback={<Card className="h-[400px] animate-pulse" />}>
                     <WeeklyStats />
                   </Suspense>
-                  <Suspense 
-                    fallback={
-                      <Card className="h-[400px] animate-pulse" />
-                    }
-                  >
+                  <Suspense fallback={<Card className="h-[400px] animate-pulse" />}>
                     <MonthlyStats />
                   </Suspense>
                 </div>
@@ -240,6 +246,41 @@ export default function Home() {
                   }
                 >
                   <SadhanaDataTable />
+                </Suspense>
+              </div>
+            </TabsContent>
+
+            {/* Leaderboard Tab */}
+            <TabsContent value="leaderboard">
+              <div className="space-y-4">
+                <div className="flex justify-center gap-2 items-center">
+                  <Badge variant="secondary" className="text-xs md:text-sm">
+                    🏆 Top Devotees
+                  </Badge>
+                  <Badge 
+                    variant="secondary" 
+                    className="text-xs md:text-sm flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200/50"
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                    Updates Every 24 Hours
+                  </Badge>
+                  <Badge 
+                    variant="secondary" 
+                    className="text-xs md:text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400"
+                  >
+                    Season 1 Active
+                  </Badge>
+                </div>
+
+                <Suspense 
+                  fallback={
+                    <Card className="h-[400px] animate-pulse" />
+                  }
+                >
+                  <Leaderboard />
                 </Suspense>
               </div>
             </TabsContent>
