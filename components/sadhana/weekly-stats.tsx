@@ -234,23 +234,25 @@ export function WeeklyStats() {
               Weekly Progress
             </CardTitle>
             <CardDescription>
-              <div className="flex flex-wrap gap-2">
-                {weeks.map((week) => (
-                  <Badge
-                    key={week}
-                    variant={selectedWeeks.includes(week) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/20 transition-colors"
-                    onClick={() => {
-                      setSelectedWeeks(prev => 
-                        prev.includes(week) 
-                          ? prev.filter(w => w !== week)
-                          : [...prev, week]
-                      );
-                    }}
-                  >
-                    {week}
-                  </Badge>
-                ))}
+              <div className="text-sm text-muted-foreground leading-relaxed">
+                <div className="flex flex-wrap gap-2">
+                  {weeks.map((week) => (
+                    <Badge
+                      key={week}
+                      variant={selectedWeeks.includes(week) ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-primary/20 transition-colors"
+                      onClick={() => {
+                        setSelectedWeeks(prev => 
+                          prev.includes(week) 
+                            ? prev.filter(w => w !== week)
+                            : [...prev, week]
+                        );
+                      }}
+                    >
+                      {week}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </CardDescription>
           </div>

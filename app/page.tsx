@@ -16,6 +16,7 @@ import Image from "next/image";
 import { ChantingVideos } from "@/components/sadhana/chanting-videos";
 import { Leaderboard } from "@/components/sadhana/leaderboard";
 import { DailyStats } from "@/components/sadhana/daily-stats";
+import { LayoutDashboard, ChartBar, ClipboardList, Trophy, Settings } from "lucide-react";
 
 export default function Home() {
   // Animation variants
@@ -51,7 +52,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden pb-16 md:pb-0">
       {/* Background Image positioned on right edge */}
       <div className="fixed right-0 top-0 h-full w-1/3 -z-10">
         <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background" />
@@ -165,7 +166,7 @@ export default function Home() {
           className="relative z-10"
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <div className="flex justify-center">
+            <div className="hidden md:flex justify-center">
               <TabsList className="grid w-full grid-cols-5 max-w-[600px] bg-white/10 dark:bg-black/10 backdrop-blur-md">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -297,6 +298,53 @@ export default function Home() {
                 </Suspense>
               </div>
             </TabsContent>
+
+            {/* Mobile Bottom Navigation - Moved inside Tabs component */}
+            <div className="fixed bottom-0 left-0 right-0 md:hidden bg-background/80 backdrop-blur-lg border-t z-50">
+              <nav className="flex justify-around items-center h-16">
+                <TabsList className="grid grid-cols-5 w-full h-full bg-transparent border-none">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="flex flex-col items-center gap-1 text-xs data-[state=active]:bg-transparent"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Overview</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="stats" 
+                    className="flex flex-col items-center gap-1 text-xs data-[state=active]:bg-transparent"
+                  >
+                    <ChartBar className="h-4 w-4" />
+                    <span>Stats</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="records" 
+                    className="flex flex-col items-center gap-1 text-xs data-[state=active]:bg-transparent"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    <span>Records</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="leaderboard" 
+                    className="flex flex-col items-center gap-1 text-xs data-[state=active]:bg-transparent relative"
+                  >
+                    <Trophy className="h-4 w-4" />
+                    <span>Leaders</span>
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="manage" 
+                    className="flex flex-col items-center gap-1 text-xs data-[state=active]:bg-transparent"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Manage</span>
+                  </TabsTrigger>
+                </TabsList>
+              </nav>
+            </div>
           </Tabs>
         </motion.div>
       </div>
