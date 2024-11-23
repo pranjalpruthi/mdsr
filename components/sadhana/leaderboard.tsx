@@ -582,35 +582,34 @@ export function Leaderboard() {
 
           {/* Podium Section */}
           <motion.div variants={itemVariants} className="relative">
-            {/* Background decoration */}
             <div className="absolute inset-0 bg-gradient-to-b from-background to-muted/20 rounded-xl -z-10" />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {leaderboardData?.length > 0 ? (
-                <div className="flex items-end justify-center gap-6">
+                <div className="flex items-end justify-center gap-2 sm:gap-6">
                   {/* 2nd Place */}
                   <motion.button
                     variants={podiumVariants}
                     key={getTopThree()[1]?.devotee_name}
                     onClick={() => triggerConfetti(["#C0C0C0", "#E8E8E8"])}
                     className={cn(
-                      "relative w-[200px] px-6 py-4 rounded-xl",
+                      "relative w-[120px] sm:w-[200px] px-3 sm:px-6 py-3 sm:py-4 rounded-xl",
                       "transition-all hover:scale-105 hover:-translate-y-1",
                       "border-2 border-[#C0C0C0]",
                       "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30",
-                      "flex flex-col items-center gap-3",
+                      "flex flex-col items-center gap-2 sm:gap-3",
                       "group shadow-lg"
                     )}
                   >
-                    <Star className="h-6 w-6 text-[#C0C0C0] group-hover:text-[#E8E8E8]" />
-                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    <Star className="h-4 w-4 sm:h-6 sm:w-6 text-[#C0C0C0] group-hover:text-[#E8E8E8]" />
+                    <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 truncate w-full text-center">
                       {getTopThree()[1]?.devotee_name}
                     </span>
-                    <Badge variant="secondary" className="bg-[#C0C0C0]/10 text-[#808080]">
+                    <Badge variant="secondary" className="bg-[#C0C0C0]/10 text-[#808080] text-xs sm:text-sm">
                       {topThreeView === 'weekly' 
                         ? getTopThree()[1]?.weekly_score 
                         : topThreeView === 'monthly'
                         ? getTopThree()[1]?.monthly_score
-                        : getTopThree()[1]?.total_score} points
+                        : getTopThree()[1]?.total_score} pts
                     </Badge>
                   </motion.button>
 
@@ -620,30 +619,30 @@ export function Leaderboard() {
                     key={getTopThree()[0]?.devotee_name}
                     onClick={() => triggerConfetti(["#FFD700", "#FFED4A"])}
                     className={cn(
-                      "relative w-[200px] px-6 py-4 rounded-xl",
+                      "relative w-[140px] sm:w-[200px] px-3 sm:px-6 py-3 sm:py-4 rounded-xl",
                       "transition-all hover:scale-105 hover:-translate-y-2",
                       "border-2 border-[#FFD700]",
                       "bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/50 dark:to-amber-900/30",
-                      "flex flex-col items-center gap-3",
+                      "flex flex-col items-center gap-2 sm:gap-3",
                       "group shadow-xl",
-                      "transform scale-110 -translate-y-4"
+                      "transform scale-105 -translate-y-4"
                     )}
                   >
-                    <Crown className="h-8 w-8 text-[#FFD700] group-hover:text-[#FFED4A]" />
+                    <Crown className="h-6 w-6 sm:h-8 sm:w-8 text-[#FFD700] group-hover:text-[#FFED4A]" />
                     <SparklesText 
                       text={getTopThree()[0]?.devotee_name}
-                      className="text-lg font-semibold"
+                      className="text-base sm:text-lg font-semibold truncate w-full text-center"
                       colors={{ first: "#FFD700", second: "#FFED4A" }}
                     />
                     <Badge 
                       variant="secondary" 
-                      className="bg-[#FFD700]/20 text-[#B8860B] px-4 py-1 text-base"
+                      className="bg-[#FFD700]/20 text-[#B8860B] px-3 sm:px-4 py-0.5 sm:py-1 text-sm sm:text-base"
                     >
                       {topThreeView === 'weekly' 
                         ? getTopThree()[0]?.weekly_score 
                         : topThreeView === 'monthly'
                         ? getTopThree()[0]?.monthly_score
-                        : getTopThree()[0]?.total_score} points
+                        : getTopThree()[0]?.total_score} pts
                     </Badge>
                     <Meteors number={5} />
                   </motion.button>
@@ -654,24 +653,24 @@ export function Leaderboard() {
                     key={getTopThree()[2]?.devotee_name}
                     onClick={() => triggerConfetti(["#CD7F32", "#DFA878"])}
                     className={cn(
-                      "relative w-[200px] px-6 py-4 rounded-xl",
+                      "relative w-[120px] sm:w-[200px] px-3 sm:px-6 py-3 sm:py-4 rounded-xl",
                       "transition-all hover:scale-105 hover:-translate-y-1",
                       "border-2 border-[#CD7F32]",
                       "bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/50 dark:to-orange-900/30",
-                      "flex flex-col items-center gap-3",
+                      "flex flex-col items-center gap-2 sm:gap-3",
                       "group shadow-lg"
                     )}
                   >
-                    <Trophy className="h-6 w-6 text-[#CD7F32] group-hover:text-[#DFA878]" />
-                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    <Trophy className="h-4 w-4 sm:h-6 sm:w-6 text-[#CD7F32] group-hover:text-[#DFA878]" />
+                    <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 truncate w-full text-center">
                       {getTopThree()[2]?.devotee_name}
                     </span>
-                    <Badge variant="secondary" className="bg-[#CD7F32]/10 text-[#8B4513]">
+                    <Badge variant="secondary" className="bg-[#CD7F32]/10 text-[#8B4513] text-xs sm:text-sm">
                       {topThreeView === 'weekly' 
                         ? getTopThree()[2]?.weekly_score 
                         : topThreeView === 'monthly'
                         ? getTopThree()[2]?.monthly_score
-                        : getTopThree()[2]?.total_score} points
+                        : getTopThree()[2]?.total_score} pts
                     </Badge>
                   </motion.button>
                 </div>
