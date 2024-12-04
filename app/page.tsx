@@ -157,6 +157,21 @@ export default function Home() {
             </Badge>
           </motion.div>
         </motion.div>
+        
+        {/* Metrics Section */}
+        <div className="w-full">
+                <Suspense 
+                  fallback={
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {[...Array(3)].map((_, i) => (
+                        <Card key={i} className="animate-pulse h-[120px]" />
+                      ))}
+                    </div>
+                  }
+                >
+                  <SadhanaMetrics />
+                </Suspense>
+              </div>
 
         {/* Main Content Tabs - Centered */}
         <motion.div
@@ -186,20 +201,7 @@ export default function Home() {
 
             {/* Overview Tab - Side by Side Layout */}
             <TabsContent value="overview" className="space-y-8">
-              {/* Metrics Section */}
-              <div className="w-full">
-                <Suspense 
-                  fallback={
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {[...Array(3)].map((_, i) => (
-                        <Card key={i} className="animate-pulse h-[120px]" />
-                      ))}
-                    </div>
-                  }
-                >
-                  <SadhanaMetrics />
-                </Suspense>
-              </div>
+
               
               {/* Form and Videos Side by Side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
