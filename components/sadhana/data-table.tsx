@@ -250,12 +250,21 @@ const RoundsBadge = memo(({ rounds }: { rounds: number }) => (
   </Badge>
 ));
 
+const MOBILE_PAGE_SIZE = 5;
+const DESKTOP_PAGE_SIZE = 10;
+
 export function SadhanaDataTable() {
   const [data, setData] = useState<SadhanaRecord[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const PAGE_SIZE = 10;
+  const [pageSize, setPageSize] = useState(() => {
+    // Detect mobile device on client-side
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768 ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
+    }
+    return DESKTOP_PAGE_SIZE;
+  });
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -265,7 +274,6 @@ export function SadhanaDataTable() {
   const [randomQuote, setRandomQuote] = useState(VANIQUOTES[0]);
   const [selectedWeek, setSelectedWeek] = useState<number>(getWeekNumber(new Date()));
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
-  const [pageSize, setPageSize] = useState<number>(10);
   const [devotees, setDevotees] = useState<string[]>([]);
   const [selectedDevotee, setSelectedDevotee] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -329,65 +337,63 @@ export function SadhanaDataTable() {
         .from('sadhna_report_view')
         .select('*', { count: 'exact' });
 
-      // Apply week filter with proper date range
+      // Apply filters
       if (filters.week) {
         const { start, end } = getWeekDates(filters.week, new Date().getFullYear());
         query = query
           .gte('date', start)
-          .lte('date', end)
-          .order('date', { ascending: false });
+          .lte('date', end);
       }
 
-      // Apply devotee filter if selected
       if (filters.devotee) {
         query = query.eq('devotee_name', filters.devotee);
       }
 
-      // Apply search filter
       if (filters.search) {
         query = query.or(`devotee_name.ilike.%${filters.search}%,book_name.ilike.%${filters.search}%`);
       }
 
-      // Apply pagination
-      query = query.range(startRange, endRange);
+      // Add order by to ensure consistent pagination
+      query = query.order('date', { ascending: false });
 
-      const { data: sadhanaData, count, error } = await query;
+      // Apply pagination with retry logic
+      const maxRetries = 2;
+      let retryCount = 0;
+      let error;
 
-      if (error) throw error;
+      while (retryCount <= maxRetries) {
+        try {
+          const { data: sadhanaData, count, error: queryError } = await query
+            .range(startRange, endRange);
 
-      if (sadhanaData) {
-        const formattedData = sadhanaData.map(record => ({
-          ...record,
-          date: new Date(record.date).toLocaleDateString(),
-        }));
-        
-        setData(formattedData);
-        setTotalPages(Math.ceil((count || 0) / pageSize));
-        setPage(pageIndex);
-        
-        // Update statistics
-        setStats(calculateStats(formattedData));
+          if (queryError) throw queryError;
 
-        // Fetch all devotees for the selected week
-        if (filters.week) {
-          const { start, end } = getWeekDates(filters.week, new Date().getFullYear());
-          const { data: allDevotees } = await supabase
-          .from('sadhna_report_view')
-          .select('distinct(devotee_name)')
-          .gte('date', start)
-          .lte('date', end);
-
-          if (allDevotees) {
-            const uniqueDevotees = allDevotees
-              .map(d => d.distinct)
-              .flat()
-              .map(d => d.devotee_name)
-              .filter(Boolean)
-              .sort();
-            setDevotees(uniqueDevotees);
+          if (sadhanaData) {
+            const formattedData = sadhanaData.map(record => ({
+              ...record,
+              date: new Date(record.date).toLocaleDateString(),
+            }));
+            
+            setData(formattedData);
+            setTotalPages(Math.ceil((count || 0) / pageSize));
+            setPage(pageIndex);
+            setStats(calculateStats(formattedData));
+            break; // Success, exit loop
+          }
+        } catch (e) {
+          error = e;
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
           }
         }
       }
+
+      if (retryCount > maxRetries) {
+        console.error('Failed to fetch data after retries:', error);
+        // Optionally show user-friendly error message
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -637,6 +643,24 @@ export function SadhanaDataTable() {
     const randomIndex = Math.floor(Math.random() * VANIQUOTES.length);
     setRandomQuote(VANIQUOTES[randomIndex]);
   }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      const newPageSize = window.innerWidth < 768 ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
+      if (newPageSize !== pageSize) {
+        setPageSize(newPageSize);
+        // Reset to first page when screen size changes
+        fetchData(0, {
+          week: selectedWeek,
+          devotee: selectedDevotee,
+          search: debouncedSearch
+        });
+      }
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [pageSize, selectedWeek, selectedDevotee, debouncedSearch]);
 
   const table = useReactTable({
     data,
@@ -905,72 +929,67 @@ export function SadhanaDataTable() {
                   {table.getFilteredRowModel().rows.length} records
                 </p>
                 <Pagination>
-                  <PaginationContent>
+                  <PaginationContent className="flex-wrap gap-1">
                     <PaginationItem>
                       <PaginationPrevious 
                         onClick={() => handlePageChange(page - 1)}
                         className={cn(
-                          "cursor-pointer",
+                          "cursor-pointer h-8 min-w-8 px-2 sm:px-3",
                           page === 0 && "pointer-events-none opacity-50"
                         )}
                       />
                     </PaginationItem>
                     
-                    {/* Show first page */}
-                    {page > 1 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => handlePageChange(0)}
-                        >
-                          1
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    {/* Show ellipsis if needed */}
-                    {page > 2 && (
-                      <PaginationItem>
-                        <PaginationLink>...</PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    {/* Show current page and neighbors */}
-                    {Array.from({ length: 3 }, (_, i) => page + i - 1)
-                      .filter(pageNum => pageNum >= 0 && pageNum < totalPages)
-                      .map(pageNum => (
-                        <PaginationItem key={pageNum}>
+                    {window.innerWidth < 640 ? (
+                      <>
+                        {page > 0 && (
+                          <PaginationItem>
+                            <PaginationLink
+                              className="h-8 min-w-8 px-2"
+                              onClick={() => handlePageChange(page - 1)}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
                           <PaginationLink
-                            onClick={() => handlePageChange(pageNum)}
-                            isActive={pageNum === page}
+                            className="h-8 min-w-8 px-2"
+                            isActive
                           >
-                            {pageNum + 1}
+                            {page + 1}
                           </PaginationLink>
                         </PaginationItem>
-                      ))}
-
-                    {/* Show ellipsis if needed */}
-                    {page < totalPages - 3 && (
-                      <PaginationItem>
-                        <PaginationLink>...</PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    {/* Show last page */}
-                    {page < totalPages - 2 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => handlePageChange(totalPages - 1)}
-                        >
-                          {totalPages}
-                        </PaginationLink>
-                      </PaginationItem>
+                        {page < totalPages - 1 && (
+                          <PaginationItem>
+                            <PaginationLink
+                              className="h-8 min-w-8 px-2"
+                              onClick={() => handlePageChange(page + 1)}
+                            >
+                              {page + 2}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )}
+                      </>
+                    ) : (
+                      Array.from({ length: Math.min(5, totalPages) }, (_, i) => (
+                        <PaginationItem key={i}>
+                          <PaginationLink
+                            className="h-8 min-w-8 px-2"
+                            onClick={() => handlePageChange(i)}
+                            isActive={page === i}
+                          >
+                            {i + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))
                     )}
 
                     <PaginationItem>
                       <PaginationNext 
                         onClick={() => handlePageChange(page + 1)}
                         className={cn(
-                          "cursor-pointer",
+                          "cursor-pointer h-8 min-w-8 px-2 sm:px-3",
                           page === totalPages - 1 && "pointer-events-none opacity-50"
                         )}
                       />
