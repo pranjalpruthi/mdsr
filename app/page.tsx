@@ -127,9 +127,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-6 space-y-6 lg:space-y-8 relative z-10">
         {/* Glass Effect Container */}
         <div 
-          className="absolute inset-0 backdrop-blur-sm bg-background/40 
-                     dark:bg-background/30 -z-[5] rounded-xl 
-                     border border-white/10 dark:border-white/5"
+          className="absolute inset-0 backdrop-blur-sm bg-background/40 dark:bg-background/30 -z-[5] rounded-xl border border-white/10 dark:border-white/5"
         />
         
         {/* Mode Toggle */}
