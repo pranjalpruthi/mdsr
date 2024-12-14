@@ -253,8 +253,24 @@ const RoundsBadge = memo(({ rounds }: { rounds: number }) => (
 const MOBILE_PAGE_SIZE = 5;
 const DESKTOP_PAGE_SIZE = 10;
 
+// Add this type at the top with your other interfaces
+interface PaginatedResponse {
+  data: SadhanaRecord[];
+  nextCursor: number | null;
+  totalCount: number;
+}
+
+// Add this interface at the top with your other interfaces
+interface SadhanaTableRecord {
+  date: string;
+  report_id: number;
+  devotee_name: string;
+  total_score: number;
+  total_rounds: number;
+}
+
 export function SadhanaDataTable() {
-  const [data, setData] = useState<SadhanaRecord[]>([]);
+  const [data, setData] = useState<SadhanaTableRecord[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -330,12 +346,19 @@ export function SadhanaDataTable() {
   ) => {
     setIsLoading(true);
     const startRange = pageIndex * pageSize;
-    const endRange = startRange + pageSize - 1;
 
     try {
+      // First, get only essential fields for the table view
       let query = supabase
         .from('sadhna_report_view')
-        .select('*', { count: 'exact' });
+        .select(`
+          report_id,
+          date,
+          devotee_name,
+          total_score,
+          total_rounds
+        `, { count: 'exact' })
+        .order('report_id', { ascending: false });
 
       // Apply filters
       if (filters.week) {
@@ -350,48 +373,26 @@ export function SadhanaDataTable() {
       }
 
       if (filters.search) {
-        query = query.or(`devotee_name.ilike.%${filters.search}%,book_name.ilike.%${filters.search}%`);
+        query = query.or(`devotee_name.ilike.%${filters.search}%`);
       }
 
-      // Add order by to ensure consistent pagination
-      query = query.order('date', { ascending: false });
+      const { data: sadhanaData, count, error } = await query
+        .range(startRange, startRange + pageSize - 1);
 
-      // Apply pagination with retry logic
-      const maxRetries = 2;
-      let retryCount = 0;
-      let error;
+      if (error) throw error;
 
-      while (retryCount <= maxRetries) {
-        try {
-          const { data: sadhanaData, count, error: queryError } = await query
-            .range(startRange, endRange);
-
-          if (queryError) throw queryError;
-
-          if (sadhanaData) {
-            const formattedData = sadhanaData.map(record => ({
-              ...record,
-              date: new Date(record.date).toLocaleDateString(),
-            }));
-            
-            setData(formattedData);
-            setTotalPages(Math.ceil((count || 0) / pageSize));
-            setPage(pageIndex);
-            setStats(calculateStats(formattedData));
-            break; // Success, exit loop
-          }
-        } catch (e) {
-          error = e;
-          retryCount++;
-          if (retryCount <= maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-          }
-        }
-      }
-
-      if (retryCount > maxRetries) {
-        console.error('Failed to fetch data after retries:', error);
-        // Optionally show user-friendly error message
+      if (sadhanaData) {
+        const formattedData: SadhanaTableRecord[] = sadhanaData.map(record => ({
+          report_id: record.report_id,
+          date: new Date(record.date).toLocaleDateString(),
+          devotee_name: record.devotee_name,
+          total_score: record.total_score,
+          total_rounds: record.total_rounds
+        }));
+        
+        setData(formattedData);
+        setTotalPages(Math.ceil((count || 0) / pageSize));
+        setPage(pageIndex);
       }
 
     } catch (error) {
@@ -399,7 +400,7 @@ export function SadhanaDataTable() {
     } finally {
       setIsLoading(false);
     }
-  }, [pageSize, calculateStats]);
+  }, [pageSize]);
 
   // Enhanced UI Components
   const StatisticCard = ({ title, value, icon: Icon }: { title: string; value: string | number; icon: any }) => (
@@ -526,12 +527,34 @@ export function SadhanaDataTable() {
     });
   }, [debouncedSearch, selectedWeek, selectedDevotee, page, fetchData]);
 
-  const handleViewDetails = (record: SadhanaRecord) => {
-    setSelectedRecord(record);
-    setIsModalOpen(true);
+  // Add this function to fetch full record details when viewing modal
+  const fetchRecordDetails = async (reportId: number) => {
+    const { data, error } = await supabase
+      .from('sadhna_report_view')
+      .select('*')
+      .eq('report_id', reportId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching record details:', error);
+      return null;
+    }
+
+    return data;
   };
 
-  const columns: ColumnDef<SadhanaRecord>[] = [
+  // Modify your handleViewDetails function
+  const handleViewDetails = async (record: SadhanaTableRecord) => {
+    setIsLoading(true);
+    const details = await fetchRecordDetails(record.report_id);
+    if (details) {
+      setSelectedRecord(details);
+      setIsModalOpen(true);
+    }
+    setIsLoading(false);
+  };
+
+  const columns: ColumnDef<SadhanaTableRecord>[] = [
     {
       accessorKey: "date",
       header: ({ column }) => (
