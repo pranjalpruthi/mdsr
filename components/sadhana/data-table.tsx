@@ -228,8 +228,6 @@ const ScoreBadge = memo(({ score }: { score: number }) => (
   <Badge 
     className={cn(
       "font-medium select-none",
-      "transition-all duration-300 ease-in-out transform hover:scale-105",
-      "cursor-default",
       getScoreColors(score, true)
     )}
   >
@@ -241,8 +239,6 @@ const RoundsBadge = memo(({ rounds }: { rounds: number }) => (
   <Badge 
     className={cn(
       "font-medium select-none",
-      "transition-all duration-300 ease-in-out transform hover:scale-105",
-      "cursor-default",
       getRoundsColors(rounds, true)
     )}
   >
@@ -250,37 +246,12 @@ const RoundsBadge = memo(({ rounds }: { rounds: number }) => (
   </Badge>
 ));
 
-const MOBILE_PAGE_SIZE = 5;
-const DESKTOP_PAGE_SIZE = 10;
-
-// Add this type at the top with your other interfaces
-interface PaginatedResponse {
-  data: SadhanaRecord[];
-  nextCursor: number | null;
-  totalCount: number;
-}
-
-// Add this interface at the top with your other interfaces
-interface SadhanaTableRecord {
-  date: string;
-  report_id: number;
-  devotee_name: string;
-  total_score: number;
-  total_rounds: number;
-}
-
 export function SadhanaDataTable() {
-  const [data, setData] = useState<SadhanaTableRecord[]>([]);
+  const [data, setData] = useState<SadhanaRecord[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [pageSize, setPageSize] = useState(() => {
-    // Detect mobile device on client-side
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < 768 ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
-    }
-    return DESKTOP_PAGE_SIZE;
-  });
+  const PAGE_SIZE = 10;
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -290,6 +261,7 @@ export function SadhanaDataTable() {
   const [randomQuote, setRandomQuote] = useState(VANIQUOTES[0]);
   const [selectedWeek, setSelectedWeek] = useState<number>(getWeekNumber(new Date()));
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [devotees, setDevotees] = useState<string[]>([]);
   const [selectedDevotee, setSelectedDevotee] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -346,19 +318,12 @@ export function SadhanaDataTable() {
   ) => {
     setIsLoading(true);
     const startRange = pageIndex * pageSize;
+    const endRange = startRange + pageSize - 1;
 
     try {
-      // First, get only essential fields for the table view
       let query = supabase
         .from('sadhna_report_view')
-        .select(`
-          report_id,
-          date,
-          devotee_name,
-          total_score,
-          total_rounds
-        `, { count: 'exact' })
-        .order('report_id', { ascending: false });
+        .select('*', { count: 'exact' });
 
       // Apply filters
       if (filters.week) {
@@ -373,28 +338,26 @@ export function SadhanaDataTable() {
       }
 
       if (filters.search) {
-        query = query.or(`devotee_name.ilike.%${filters.search}%`);
+        query = query.ilike('devotee_name', `%${filters.search}%`);
       }
 
-      const { data: sadhanaData, count, error } = await query
-        .range(startRange, startRange + pageSize - 1);
+      // Apply pagination
+      query = query
+        .order('date', { ascending: false })
+        .range(startRange, endRange);
+
+      const { data: sadhanaData, count, error } = await query;
 
       if (error) throw error;
 
       if (sadhanaData) {
-        const formattedData: SadhanaTableRecord[] = sadhanaData.map(record => ({
-          report_id: record.report_id,
-          date: new Date(record.date).toLocaleDateString(),
-          devotee_name: record.devotee_name,
-          total_score: record.total_score,
-          total_rounds: record.total_rounds
-        }));
-        
-        setData(formattedData);
+        setData(sadhanaData.map(record => ({
+          ...record,
+          date: new Date(record.date).toLocaleDateString()
+        })));
         setTotalPages(Math.ceil((count || 0) / pageSize));
         setPage(pageIndex);
       }
-
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -527,50 +490,18 @@ export function SadhanaDataTable() {
     });
   }, [debouncedSearch, selectedWeek, selectedDevotee, page, fetchData]);
 
-  // Add this function to fetch full record details when viewing modal
-  const fetchRecordDetails = async (reportId: number) => {
-    const { data, error } = await supabase
-      .from('sadhna_report_view')
-      .select('*')
-      .eq('report_id', reportId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching record details:', error);
-      return null;
-    }
-
-    return data;
+  const handleViewDetails = (record: SadhanaRecord) => {
+    setSelectedRecord(record);
+    setIsModalOpen(true);
   };
 
-  // Modify your handleViewDetails function
-  const handleViewDetails = async (record: SadhanaTableRecord) => {
-    setIsLoading(true);
-    const details = await fetchRecordDetails(record.report_id);
-    if (details) {
-      setSelectedRecord(details);
-      setIsModalOpen(true);
-    }
-    setIsLoading(false);
-  };
-
-  const columns: ColumnDef<SadhanaTableRecord>[] = [
+  const columns: ColumnDef<SadhanaRecord>[] = [
     {
       accessorKey: "date",
-      header: ({ column }) => (
-        <Button variant="ghost" size="sm" className="h-7 px-2 -ml-2" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          📅 Date <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
+      header: "📅 Date",
       cell: ({ row }) => {
-        // Ensure proper date parsing
-        const date = new Date(row.original.date);
-        return (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{format(date, 'EEE')}</span>
-            <span>{format(date, 'dd MMM')}</span>
-          </div>
-        );
+        const date = new Date(row.getValue("date"));
+        return date.toLocaleDateString();
       },
     },
     {
@@ -666,24 +597,6 @@ export function SadhanaDataTable() {
     const randomIndex = Math.floor(Math.random() * VANIQUOTES.length);
     setRandomQuote(VANIQUOTES[randomIndex]);
   }, []);
-
-  useEffect(() => {
-    function handleResize() {
-      const newPageSize = window.innerWidth < 768 ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
-      if (newPageSize !== pageSize) {
-        setPageSize(newPageSize);
-        // Reset to first page when screen size changes
-        fetchData(0, {
-          week: selectedWeek,
-          devotee: selectedDevotee,
-          search: debouncedSearch
-        });
-      }
-    }
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [pageSize, selectedWeek, selectedDevotee, debouncedSearch]);
 
   const table = useReactTable({
     data,
@@ -940,93 +853,41 @@ export function SadhanaDataTable() {
               </TableBody>
             </Table>
           </div>
-          <div className="mt-4 flex items-center justify-between">
-            {isLoading ? (
-              <>
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-64" />
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  {table.getFilteredRowModel().rows.length} records
-                </p>
-                <Pagination>
-                  <PaginationContent className="flex-wrap gap-1">
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => handlePageChange(page - 1)}
-                        className={cn(
-                          "cursor-pointer h-8 min-w-8 px-2 sm:px-3",
-                          page === 0 && "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                    
-                    {window.innerWidth < 640 ? (
-                      <>
-                        {page > 0 && (
-                          <PaginationItem>
-                            <PaginationLink
-                              className="h-8 min-w-8 px-2"
-                              onClick={() => handlePageChange(page - 1)}
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )}
-                        <PaginationItem>
-                          <PaginationLink
-                            className="h-8 min-w-8 px-2"
-                            isActive
-                          >
-                            {page + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                        {page < totalPages - 1 && (
-                          <PaginationItem>
-                            <PaginationLink
-                              className="h-8 min-w-8 px-2"
-                              onClick={() => handlePageChange(page + 1)}
-                            >
-                              {page + 2}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )}
-                      </>
-                    ) : (
-                      Array.from({ length: Math.min(5, totalPages) }, (_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            className="h-8 min-w-8 px-2"
-                            onClick={() => handlePageChange(i)}
-                            isActive={page === i}
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              {table.getFilteredRowModel().rows.length} records
+            </p>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => handlePageChange(page - 1)}
+                    className={cn(
+                      "cursor-pointer",
+                      page === 0 && "pointer-events-none opacity-50"
                     )}
-
-                    <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => handlePageChange(page + 1)}
-                        className={cn(
-                          "cursor-pointer h-8 min-w-8 px-2 sm:px-3",
-                          page === totalPages - 1 && "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </>
-            )}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink isActive>{page + 1}</PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => handlePageChange(page + 1)}
+                    className={cn(
+                      "cursor-pointer",
+                      page === totalPages - 1 && "pointer-events-none opacity-50"
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden p-0 gap-0 bg-background/80 backdrop-blur-md border border-muted">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
